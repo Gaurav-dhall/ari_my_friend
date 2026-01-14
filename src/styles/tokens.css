@@ -1,0 +1,20 @@
+:root {
+  /* Backgrounds */
+  --bg-main: 15 17 21;
+  --bg-card: 22 25 33;
+
+  /* Chat bubbles */
+  --bubble-user: 59 130 246;
+  --bubble-friend: 30 33 46;
+
+  /* Text */
+  --text-main: 230 230 235;
+  --text-muted: 150 155 170;
+
+  /* Accent */
+  --accent: 124 140 248;
+
+  /* Fonts */
+  --font-main: 'Inter', system-ui, sans-serif;
+  --font-soft: 'Plus Jakarta Sans', sans-serif;
+}

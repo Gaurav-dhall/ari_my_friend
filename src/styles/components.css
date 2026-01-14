@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@layer components {
+    .bg-main {
+        background: rgb(var(--bg-main));
+    }
+
+    .bg-card {
+        background: rgb(var(--bg-card));
+    }
+
+    .font-soft {
+        font-family: var(--font-soft);
+    }
+
+    .text-main {
+        color: rgb(var(--text-main));
+    }
+
+    .text-muted {
+        color: rgb(var(--text-muted));
+    }
+
+    .bubble-user {
+        background: rgb(var(--bubble-user));
+    }
+
+    .bubble-friend {
+        background: rgb(var(--bubble-friend));
+    }
+
+    .accent {
+        color: rgb(var(--accent));
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-20px);
+        }
+
+        100% {
+            transform: translateY(0px);
+        }
+    }
+
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
+    }
+}
