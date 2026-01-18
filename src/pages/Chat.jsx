@@ -5,12 +5,25 @@ import ChatScrollArea from '../components/ChatScrollArea';
 import MoodDropdown from '../components/MoodDropdown';
 import StatusTooltip from '../components/StatusTooltip';
 import SettingsDialog from '../components/SettingsDialog';
+import { chatWithAri } from '../../services/chatClient';
+import ClearChatDialog from '../components/ClearChatDialog';
+import { loadBehavior } from '../utils/behaviourStorage';
+import {
+  loadChatHistory,
+  saveChatHistory,
+  getMemoryForAI,
+} from "../utils/chatMemory";
+
+import { clearChatHistory } from "../utils/chatMemory";
+
+
+
+
 
 const INITIAL_MESSAGES = [
   { id: 1, text: "Hey! How are you feeling today?", sender: 'ai', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-  { id: 2, text: "I'm doing pretty good, actually. Just working on some new designs.", sender: 'user', timestamp: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
-  { id: 3, text: "That sounds exciting! I'd love to see what you're working on. 🎨", sender: 'ai', timestamp: new Date(Date.now() - 1000 * 30).toISOString() },
 ];
+
 
 const WELCOME_MESSAGES = [
     "Ready to spill the tea? ☕ Or just vent about the weather?",
@@ -20,11 +33,40 @@ const WELCOME_MESSAGES = [
     "Let's chat! I promise not to judge your Netflix history. 🎬",
 ];
 
+function getTypingDelay(text) {
+  const base = Math.min(text.length * 40, 2000); // max 2s
+  console.log(base);
+  const random = Math.random() * 800;            // randomness
+  console.log(random);
+  return base + random;
+}
+
+function maybeSplitMessage(text) {
+  if (text.length < 80) return [text];
+
+  if (Math.random() > 0.6) {
+    const splitIndex = text.indexOf(". ", 40);
+    if (splitIndex !== -1) {
+      return [
+        text.slice(0, splitIndex + 1),
+        text.slice(splitIndex + 2),
+      ];
+    }
+  }
+
+  return [text];
+}
+
 const Chat = () => {
   const [hasStarted, setHasStarted] = useState(false);
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState(() => {
+  const history = loadChatHistory();
+  return history.length ? history : INITIAL_MESSAGES;
+});
   const [inputValue, setInputValue] = useState('');
   const bottomRef = useRef(null);
+  const [isTyping, setIsTyping] = useState(false);
+const [error, setError] = useState(null);
 
   // Select a random message once on mount
   const welcomeMessage = useMemo(() => {
@@ -41,31 +83,96 @@ const Chat = () => {
     }
   }, [messages, hasStarted]);
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+  useEffect(() => {
+  if (messages.length) {
+    saveChatHistory(messages);
+  }
+}, [messages]);
 
-    const newMessage = {
-      id: Date.now(),
-      text: inputValue,
-      sender: 'user',
-      timestamp: new Date().toISOString(),
-    };
 
-    setMessages((prev) => [...prev, newMessage]);
-    setInputValue('');
+  const handleClearChat = () => {
+    clearChatHistory();
+    setMessages(INITIAL_MESSAGES);
+    setHasStarted(false); // Optionally go back to welcome screen
+  };
 
-    // Mock AI response
-    setTimeout(() => {
-      const aiResponse = {
-        id: Date.now() + 1,
-        text: "That's really cool! Tell me more about it.",
-        sender: 'ai',
+  const handleSendMessage = async (e) => {
+  e.preventDefault();
+  if (!inputValue.trim()) return;
+
+  const userMessage = {
+    id: Date.now(),
+    text: inputValue,
+    sender: "user",
+    timestamp: new Date().toISOString(),
+  };
+
+  setMessages((prev) => [...prev, userMessage]);
+  setInputValue("");
+  setIsTyping(true);
+  setError(null);
+
+  const memoryForAI = getMemoryForAI(messages);
+
+  
+
+  try {
+    const response = await chatWithAri({
+      message: userMessage.text,
+
+      behavior: loadBehavior(),
+
+      // later store this in localStorage
+      memory: memoryForAI,
+    });
+
+
+    // 1️⃣ Split msg into chunks for human-like feel
+    const messageParts = maybeSplitMessage(response.reply);
+
+    for (const part of messageParts) {
+       const aiMessage = {
+        id: Date.now() + Math.random(),
+        text: part,
+        sender: "ai",
         timestamp: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, aiResponse]);
-    }, 1500);
-  };
+
+      const delay = getTypingDelay(part);
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      setMessages((prev) => [...prev, aiMessage]);
+    }
+
+    // 2️⃣ Handle Follow-up Message (Human-like double text)
+    if (response.followUp) {
+      // Random wait before starting to type follow-up (3s - 6s)
+      const thinkTime = 3000 + Math.random() * 3000;
+      await new Promise(resolve => setTimeout(resolve, thinkTime));
+
+      setIsTyping(true);
+
+      const followUpDelay = getTypingDelay(response.followUp);
+      await new Promise(resolve => setTimeout(resolve, followUpDelay));
+      
+      const followUpMsg = {
+        id: Date.now() + Math.random(),
+        text: response.followUp,
+        sender: "ai",
+        timestamp: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, followUpMsg]);
+      setIsTyping(false);
+    }
+  } catch (err) {
+    console.error(err);
+    setError("Ari is feeling a bit off right now 😕");
+  } finally {
+    setIsTyping(false);
+  }
+};
+
 
   // ------------------------------------------------------------------
   // Welcome View
@@ -159,6 +266,7 @@ const Chat = () => {
             </div>
             
             <div className="flex items-center gap-2">
+                <ClearChatDialog onClear={handleClearChat} />
                 <MoodDropdown />
                 <SettingsDialog />
             </div>
@@ -192,9 +300,24 @@ const Chat = () => {
                       {msg.text}
                     </div>
                   </motion.div>
+                  
+
                 );
               })}
              </AnimatePresence>
+             {isTyping && (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="flex justify-start"
+  >
+    <div className="bubble-friend px-4 py-2 rounded-2xl text-sm text-muted italic">
+      Ari is typing…
+    </div>
+  </motion.div>
+)}
+
              <div ref={bottomRef} />
           </div>
         </ChatScrollArea>

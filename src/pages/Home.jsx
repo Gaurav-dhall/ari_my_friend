@@ -61,7 +61,7 @@ export default function Home() {
 
             <div className="flex flex-wrap gap-4 mt-4">
               <button 
-                onClick={() => navigate('/chat')}
+                onClick={() => navigate('/behavior')}
                 className="px-8 py-4 bg-[rgb(var(--accent))] text-white rounded-full font-semibold hover:bg-[rgb(var(--accent))]/90 transition-all shadow-[0_0_20px_rgba(var(--accent),0.3)] hover:shadow-[0_0_30px_rgba(var(--accent),0.5)] active:scale-95 flex items-center gap-2"
               >
                 Start Chatting <MessageCircle className="w-5 h-5" />
@@ -251,7 +251,7 @@ export default function Home() {
               Join thousands of others who have found a friend in Ari. Start your journey towards a supportive friendship today.
             </p>
             <button 
-              onClick={() => navigate('/chat')}
+              onClick={() => navigate('/behavior')}
               className="px-10 py-5 bg-white text-[rgb(var(--bg-main))] rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl flex items-center gap-2 mx-auto"
             >
               Say Hello to Ari <Heart className="w-5 h-5 text-red-500 fill-current" />
